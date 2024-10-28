@@ -1,0 +1,22 @@
+<main class="content">
+        <form action="/user/save/" method="get">
+                Имя<input type="text" name="name" required>
+                День рождения<input type="date" name="birthday" required>
+                <button type="submit">Добавить</button>
+        </form>
+        <hr>
+        <p>Список пользователей в хранилище</p>
+
+        {% if message %}
+                <div class="info-success">
+                        <p>{{ message }}</p>
+                        <p class="close-info">close</p>
+                </div>
+        {% endif %}
+
+        <ul id="navigation">
+            {% for user in users %}
+                <li>{{ user.getUserName() }}. День рождения: {{ user.getUserBirthday() | date('d.m.Y') }}</li>
+            {% endfor %}
+        </ul>
+</main>
