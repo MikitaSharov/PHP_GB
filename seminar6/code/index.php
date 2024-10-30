@@ -11,4 +11,7 @@ try{
 }
 catch(Exception $e){
     echo Render::renderExceptionPage($e);
+} catch (\Twig\Error\LoaderError $e) {
+} catch (\Twig\Error\RuntimeError $e) {
+} catch (\Twig\Error\SyntaxError $e) {
 }
