@@ -24,8 +24,8 @@ class Render {
     }
 
     /**
-     * @throws SyntaxError
      * @throws RuntimeError
+     * @throws SyntaxError
      * @throws LoaderError
      */
     public function renderPage(string $contentTemplateName = 'page-index.tpl', array $templateVariables = []): string
@@ -33,6 +33,9 @@ class Render {
         $template = $this->environment->load('main.tpl');
         
         $templateVariables['content_template_name'] = $contentTemplateName;
+        $templateVariables['header'] = 'header.twig';
+        $templateVariables['footer'] = 'footer.twig';
+        $templateVariables['leftSidebar'] = 'left-sidebar.twig';
  
         return $template->render($templateVariables);
     }
@@ -48,7 +51,7 @@ class Render {
 
         $loader = new FilesystemLoader($_SERVER['DOCUMENT_ROOT'] . $viewFolder);
         $environment = new Environment($loader, [
-            'cache' => $_SERVER['DOCUMENT_ROOT'].'/cache/',
+//            'cache' => $_SERVER['DOCUMENT_ROOT'].'/cache/',
         ]);
 
         $template = $environment->load('main.tpl');

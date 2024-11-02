@@ -5,6 +5,7 @@ namespace Geekbrains\Application1\Domain\Controllers;
 use Exception;
 use Geekbrains\Application1\Application\Render;
 use Geekbrains\Application1\Domain\Models\User;
+use JetBrains\PhpStorm\NoReturn;
 use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;
 use Twig\Error\SyntaxError;
@@ -17,8 +18,10 @@ class UserController {
      * @throws LoaderError
      */
     public function actionIndex(): string {
+        $message = $_SESSION['message'] ?? null;
+        unset($_SESSION['message']);
+
         $users = User::getAllUsersFromStorage();
-        
         $render = new Render();
 
         if(!$users){
@@ -26,7 +29,7 @@ class UserController {
                 'user-empty.tpl', 
                 [
                     'title' => 'Список пользователей в хранилище',
-                    'message' => "Список пуст или не найден"
+                    'message' => $message ?? "Список пуст или не найден"
                 ]);
         }
         else{
@@ -34,92 +37,104 @@ class UserController {
                 'user-index.tpl', 
                 [
                     'title' => 'Список пользователей в хранилище',
-                    'users' => $users
+                    'users' => $users,
+                    'message' => $message
                 ]);
         }
     }
 
-    /**
-     * @throws SyntaxError
-     * @throws RuntimeError
-     * @throws LoaderError
-     * @throws Exception
-     */
-    public function actionSave(): string {
+    #[NoReturn] public function actionSave(): void {
         if(User::validateRequestData()) {
             $user = new User();
             $user->setParamsFromRequestData();
-            $user->saveToStorage();
 
-            $render = new Render();
-
-            return $render->renderPage(
-                'user-created.tpl', 
-                [
-                    'title' => 'Пользователь создан',
-                    'message' => "Создан пользователь " . $user->getUserName() . " " . $user->getUserLastName()
-                ]);
+            if ($user->saveToStorage()) {
+                $_SESSION['message'] = "Пользователь {$user->getUserName()} успешно добавлен!";
+            } else {
+                $_SESSION['message'] = "Ошибка при сохранении пользователя!";
+            }
         }
         else {
-            throw new Exception("Переданные данные некорректны");
+            $_SESSION['message'] = "Переданные данные некорректны";
         }
+
+        header("Location: /user");
+        exit;
     }
 
     /**
-     * @throws SyntaxError
      * @throws RuntimeError
+     * @throws SyntaxError
      * @throws LoaderError
-     * @throws Exception
      */
     public function actionUpdate(): string {
-        if(User::exists($_GET['id'])) {
-            $user = new User();
-            $user->setUserId($_GET['id']);
-            
-            $arrayData = [];
-
-            if(isset($_GET['name']))
-                $arrayData['user_name'] = $_GET['name'];
-
-            if(isset($_GET['lastname'])) {
-                $arrayData['user_lastname'] = $_GET['lastname'];
-            }
-            
-            $user->updateUser($arrayData);
-        }
-        else {
+        if (!isset($_GET['id']) || !User::exists($_GET['id'])) {
             throw new Exception("Пользователь не существует");
         }
 
+        $userId = (int)$_GET['id'];
+        $user = User::getUserById($userId);
+
+        if ($user === null) {
+            throw new Exception("Пользователь не найден");
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Массив для обновления данных пользователя
+            $arrayData = [
+                'id_user' => $userId
+            ];
+
+            if (!empty($_POST['name'])) {
+                $arrayData['user_name'] = $_POST['name'];
+                $user->setName($_POST['name']);
+            }
+
+            if (!empty($_POST['lastname'])) {
+                $arrayData['user_lastname'] = $_POST['lastname'];
+                $user->setLastName($_POST['lastname']);
+            }
+
+            // Здесь можно добавить обработку даты рождения
+            if (!empty($_POST['birthday'])) {
+                $user->setBirthdayFromString($_POST['birthday']);
+                $arrayData['user_birthday_timestamp'] = $user->getUserBirthday();
+            }
+
+            // Обновляем пользователя в базе данных
+            $user->updateUser($arrayData);
+
+            // Сообщение об успешном обновлении
+            $_SESSION['message'] = "Пользователь {$user->getUserName()} успешно обновлён!";
+            header("Location: /user");
+            exit;
+        }
+
+        // Рендерим страницу редактирования пользователя
         $render = new Render();
         return $render->renderPage(
-            'user-created.tpl', 
+            'user-edit.tpl',
             [
-                'title' => 'Пользователь обновлен',
-                'message' => "Обновлен пользователь " . $user->getUserId()
-            ]);
+                'title' => 'Редактирование пользователя',
+                'user' => $user
+            ]
+        );
     }
 
-    /**
-     * @throws RuntimeError
-     * @throws SyntaxError
-     * @throws LoaderError
-     * @throws Exception
-     */
-    public function actionDelete(): string {
-        if(User::exists($_GET['id'])) {
-            User::deleteFromStorage($_GET['id']);
 
-            $render = new Render();
-            
-            return $render->renderPage(
-                'user-removed.tpl', []
-            );
+    public function actionDelete(): void {
+        if(User::exists($_GET['id'])) {
+            if(User::deleteFromStorage($_GET['id'])){
+                $_SESSION['message'] = "Пользователь успешно удалён!";
+            } else {
+                $_SESSION['message'] = "Ошибка при удалении пользователя!";
+            }
         }
         else {
-            throw new Exception("Пользователь не существует");
+            $_SESSION['message'] = "Пользователя с таким id не существует!";
         }
-    }
 
-    
+        header("Location: /user");
+        exit;
+    }
 }

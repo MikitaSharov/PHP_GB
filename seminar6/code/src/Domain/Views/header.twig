@@ -1,0 +1,11 @@
+<header class="header">
+    <nav class="nav">
+        <a class="nav__link" href="/">Главная</a>
+        <a class="nav__link" href="/user">Пользователи</a>
+        <a class="nav__link" href="/about">О нас</a>
+    </nav>
+    <div class="time">
+{#        {{ "now"|date('H:i', timezone="Europe/Minsk") }}#}
+        {{ timeNow }}
+    </div>
+</header>

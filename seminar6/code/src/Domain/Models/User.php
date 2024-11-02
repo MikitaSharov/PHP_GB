@@ -55,6 +55,30 @@ class User {
         $this->userBirthday = strtotime($birthdayString);
     }
 
+    public static function getUserById(int $id): ?User {
+        // SQL-запрос для получения пользователя по ID
+        $sql = "SELECT * FROM users WHERE id_user = :id_user";
+
+        // Подготовка и выполнение запроса
+        $handler = Application::$storage->get()->prepare($sql);
+        $handler->execute(['id_user' => $id]);
+        $result = $handler->fetch();
+
+        // Проверка, был ли пользователь найден
+        if ($result) {
+            // Создание и возвращение объекта User с данными из базы
+            return new User(
+                $result['user_name'] ?? null,
+                $result['user_lastname'] ?? null,
+                $result['user_birthday_timestamp'] ?? null,
+                $result['id_user']
+            );
+        }
+
+        // Возвращаем null, если пользователь не найден
+        return null;
+    }
+
     public static function getAllUsersFromStorage(): array {
         $sql = "SELECT * FROM users";
 
@@ -65,7 +89,7 @@ class User {
         $users = [];
 
         foreach($result as $item){
-            $user = new User($item['user_name'], $item['user_lastname'], $item['user_birthday_timestamp']);
+            $user = new User($item['user_name'], $item['user_lastname'], $item['user_birthday_timestamp'], $item['id_user']);
             $users[] = $user;
         }
         
@@ -74,9 +98,9 @@ class User {
 
     public static function validateRequestData(): bool{
         if(
-            isset($_GET['name']) && !empty($_GET['name']) &&
-            isset($_GET['lastname']) && !empty($_GET['lastname']) &&
-            isset($_GET['birthday']) && !empty($_GET['birthday'])
+            !empty($_GET['name']) &&
+            !empty($_GET['lastname']) &&
+            !empty($_GET['birthday'])
         ){
             return true;
         }
@@ -91,11 +115,12 @@ class User {
         $this->setBirthdayFromString($_GET['birthday']); 
     }
 
-    public function saveToStorage(){
+    public function saveToStorage(): bool
+    {
         $sql = "INSERT INTO users(user_name, user_lastname, user_birthday_timestamp) VALUES (:user_name, :user_lastname, :user_birthday)";
 
         $handler = Application::$storage->get()->prepare($sql);
-        $handler->execute([
+        return $handler->execute([
             'user_name' => $this->userName,
             'user_lastname' => $this->userLastName,
             'user_birthday' => $this->userBirthday
@@ -120,28 +145,39 @@ class User {
         }
     }
 
-    public function updateUser(array $userDataArray): void{
+    public function updateUser(array $userDataArray): void {
+        // Убедитесь, что id_user не включён в обновляемые данные
+        if (isset($userDataArray['id_user'])) {
+            unset($userDataArray['id_user']);
+        }
+
         $sql = "UPDATE users SET ";
 
         $counter = 0;
-        foreach($userDataArray as $key => $value) {
-            $sql .= $key ." = :".$key;
-
-            if($counter != count($userDataArray)-1) {
-                $sql .= ",";
+        foreach ($userDataArray as $key => $value) {
+            $sql .= $key . " = :" . $key;
+            if ($counter != count($userDataArray) - 1) {
+                $sql .= ", ";
             }
-
             $counter++;
         }
 
+        // Добавляем условие WHERE для обновления конкретного пользователя
+        $sql .= " WHERE id_user = :id_user";
+
+        // Добавляем id_user в параметры запроса
+        $userDataArray['id_user'] = $this->idUser;
+
+        // Подготовка и выполнение запроса
         $handler = Application::$storage->get()->prepare($sql);
         $handler->execute($userDataArray);
     }
 
-    public static function deleteFromStorage(int $user_id) : void {
+
+    public static function deleteFromStorage(int $user_id) : bool {
         $sql = "DELETE FROM users WHERE id_user = :id_user";
 
         $handler = Application::$storage->get()->prepare($sql);
-        $handler->execute(['id_user' => $user_id]);
+        return $handler->execute(['id_user' => $user_id]);
     }
 }

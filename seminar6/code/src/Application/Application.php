@@ -10,11 +10,7 @@ class Application {
 
     private const APP_NAMESPACE = 'Geekbrains\Application1\Domain\Controllers\\';
 
-    private string $controllerName;
-    private string $methodName;
-
     public static Config $config;
-
     public static Storage $storage;
 
     public function __construct(){
@@ -22,9 +18,6 @@ class Application {
         Application::$storage = new Storage();
     }
 
-    /**
-     * @throws Exception
-     */
     public function run() : string {
         $routeArray = explode('/', $_SERVER['REQUEST_URI']);
 
@@ -35,9 +28,9 @@ class Application {
             $controllerName = "page";
         }
 
-        $this->controllerName = Application::APP_NAMESPACE . ucfirst($controllerName) . "Controller";
+        $controllerName1 = Application::APP_NAMESPACE . ucfirst($controllerName) . "Controller";
 
-        if(class_exists($this->controllerName)){
+        if(class_exists($controllerName1)){
             // пытаемся вызвать метод
             if(isset($routeArray[2]) && $routeArray[2] != '') {
                 $methodName = $routeArray[2];
@@ -46,21 +39,24 @@ class Application {
                 $methodName = "index";
             }
 
-            $this->methodName = "action" . ucfirst($methodName);
+            $methodName1 = "action" . ucfirst($methodName);
 
-            if(method_exists($this->controllerName, $this->methodName)){
-                $controllerInstance = new $this->controllerName();
+            if(method_exists($controllerName1, $methodName1)){
+                $controllerInstance = new $controllerName1();
                 return call_user_func_array(
-                    [$controllerInstance, $this->methodName],
+                    [$controllerInstance, $methodName1],
                     []
                 );
             }
             else {
-                throw new Exception("Метод " .  $this->methodName . " не существует");
+                return "Метод не существует";
             }
         }
         else{
-            throw new Exception("Класс $this->controllerName не существует");
+            header(404);
+            header("HTTP/1.1 404 Not Found");
+            header('Location: /404.html');
+            die();
         }
     }
 }

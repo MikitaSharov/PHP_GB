@@ -31,6 +31,8 @@ services:
     # мы можем создать для контейнеров внутреннюю сеть
     networks:
       - app-network
+    depends_on:
+      - memcache
 
    #Контейнер с PHP-FPM, назовём его app
   cli:
@@ -60,6 +62,15 @@ services:
     volumes:
         - ./db:/var/lib/mysql
     # мы можем создать для контейнеров внутреннюю сеть
+    networks:
+      - app-network
+
+  # Контейнер с Memcached
+  memcache:
+    image: memcached:latest
+    container_name: memcache
+    ports:
+      - "11211:11211"
     networks:
       - app-network
 
