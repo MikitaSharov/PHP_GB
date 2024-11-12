@@ -2,3 +2,4 @@ mysql.sock
 *.env
 vendor/
 cache/
+db/
