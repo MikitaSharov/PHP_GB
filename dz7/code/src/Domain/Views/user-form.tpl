@@ -18,5 +18,13 @@
     <label for="user-birthday">День рождения:</label>
     <input id="user-birthday" type="text" name="birthday" placeholder="ДД-ММ-ГГГГ" value="{{user_data.user_birthday_timestamp | date('d-m-Y') }}">
   </p>
+
+  {% if not user_data.id_user %}
+    <p>
+      <label for="user-password">Пароль:</label>
+      <input id="user-password" type="password" name="password" value="">
+    </p>
+  {% endif %}
+
   <p><input type="submit" value="Сохранить"></p>
 </form>

@@ -67,8 +67,8 @@ class Application {
 
         $this->controllerName = Application::APP_NAMESPACE . ucfirst($controllerName) . "Controller";
 
-        if(class_exists($this->controllerName)){
-            // пытаемся вызвать метод
+        if(class_exists($this->controllerName)) {
+
             if(isset($routeArray[2]) && $routeArray[2] != '') {
                 $methodName = $routeArray[2];
             }
@@ -110,13 +110,8 @@ class Application {
 
     private function checkAccessToMethod(AbstractController $controllerInstance, string $methodName): bool {
         $userRoles = $controllerInstance->getUserRoles();
-
-
-
         $rules = $controllerInstance->getActionsPermissions($methodName);
-
         $rules[] = 'user';
-
         $isAllowed = false;
 
         if(!empty($rules)){
@@ -129,6 +124,5 @@ class Application {
         }
 
         return $isAllowed;
-
     }
 }

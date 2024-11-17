@@ -2,10 +2,13 @@
 
 namespace Geekbrains\Application1\Domain\Controllers;
 
+use Exception;
 use Geekbrains\Application1\Application\Application;
 use Geekbrains\Application1\Application\Render;
 use Geekbrains\Application1\Application\Auth;
 use Geekbrains\Application1\Domain\Models\User;
+use JetBrains\PhpStorm\NoReturn;
+use Random\RandomException;
 
 class UserController extends AbstractController {
 
@@ -40,11 +43,23 @@ class UserController extends AbstractController {
         }
     }
 
+    /**
+     * @throws RandomException
+     * @throws Exception
+     */
     public function actionSave(): string {
+        if (!Auth::userHasRole('admin')) {
+            throw new \Exception("Доступ запрещен. У вас нет прав для выполнения этого действия.");
+        }
+
         if(User::validateRequestData()) {
             $user = new User();
             $user->setParamsFromRequestData();
+
             $user->saveToStorage();
+
+            $token = Auth::generateToken($user->getUserId());
+            User::setToken($user->getUserId(), $token);
 
             $render = new Render();
 
@@ -54,13 +69,16 @@ class UserController extends AbstractController {
                     'title' => 'Пользователь создан',
                     'message' => "Создан пользователь " . $user->getUserName() . " " . $user->getUserLastName()
                 ]);
-        }
-        else {
-            throw new \Exception("Переданные данные некорректны");
+        } else {
+            throw new Exception("Переданные данные некорректны");
         }
     }
 
     public function actionDelete(): string {
+        if (!Auth::userHasRole('admin')) {
+            throw new \Exception("Доступ запрещен. У вас нет прав для выполнения этого действия.");
+        }
+
         if(User::exists($_GET['user_id'])) {
             User::deleteFromStorage($_GET['user_id']);
 
@@ -69,13 +87,12 @@ class UserController extends AbstractController {
 
         }
         else {
-            throw new \Exception("Пользователь не существует");
+            throw new Exception("Пользователь не существует");
         }
     }
 
     public function actionEdit(): string {
         $render = new Render();
-
 
         $action = '/user/save';
         if(isset($_GET['user_id'])){
@@ -111,7 +128,7 @@ class UserController extends AbstractController {
             $user->updateUser($arrayData);
         }
         else {
-            throw new \Exception("Пользователь не существует");
+            throw new Exception("Пользователь не существует");
         }
 
         $render = new Render();
@@ -137,20 +154,20 @@ class UserController extends AbstractController {
         return Auth::getPasswordHash($_GET['pass_string']);
     }
 
+    /**
+     * @throws RandomException
+     */
     public function actionLogin(): string {
         $result = false;
 
-        if(isset($_POST['login']) && isset($_POST['password'])){
+        if(isset($_POST['login']) && isset($_POST['password'])) {
             $result = Application::$auth->proceedAuth($_POST['login'], $_POST['password']);
-            if($result &&
-                isset($_POST['user-remember']) && $_POST['user-remember'] == 'remember'){
-                $token = Application::$auth->generateToken($_SESSION['auth']['id_user']);
 
+            if ($result && isset($_POST['user-remember']) && $_POST['user-remember'] == 'remember') {
+                $token = Application::$auth->generateToken($_SESSION['auth']['id_user']);
                 User::setToken($_SESSION['auth']['id_user'], $token);
             }
         }
-
-
 
         if(!$result){
             $render = new Render();
@@ -162,13 +179,13 @@ class UserController extends AbstractController {
                     'auth-success' => false,
                     'auth-error' => 'Неверные логин или пароль'
                 ]);
-        }
-        else{
+        } else {
             header('Location: /');
             return "";
         }
     }
-    public function actionLogout(): void {
+
+    #[NoReturn] public function actionLogout(): void {
         User::destroyToken();
         session_destroy();
         unset($_SESSION['auth']);

@@ -3,10 +3,19 @@
 namespace Geekbrains\Application1\Application;
 
 use Geekbrains\Application1\Domain\Models\User;
+use Random\RandomException;
 
 class Auth {
     public static function getPasswordHash(string $rawPassword): string {
-        return password_hash($_GET['pass_string'], PASSWORD_BCRYPT);
+        return password_hash($rawPassword, PASSWORD_BCRYPT);
+    }
+
+    /**
+     * @throws RandomException
+     */
+    public static function generateToken(int $userId): string {
+        $bytes = random_bytes(16);
+        return bin2hex($bytes);
     }
 
     public function restoreSession(): void{
@@ -22,31 +31,34 @@ class Auth {
         }
     }
 
-    public function generateToken(int $userId): string {
-        $bytes = random_bytes(16);
-        return bin2hex($bytes);
-    }
-
-
-
-    public function proceedAuth(string $login, string $password): bool{
+    public function proceedAuth(string $login, string $password): bool {
         $sql = "SELECT id_user, user_name, user_lastname, password_hash FROM users WHERE login = :login";
 
         $handler = Application::$storage->get()->prepare($sql);
         $handler->execute(['login' => $login]);
         $result = $handler->fetchAll();
 
-        if(!empty($result) && password_verify($password, $result[0]['password_hash'])){
+        if(!empty($result) && password_verify($password, $result[0]['password_hash'])) {
             $_SESSION['auth']['user_name'] = $result[0]['user_name'];
             $_SESSION['auth']['user_lastname'] = $result[0]['user_lastname'];
             $_SESSION['auth']['id_user'] = $result[0]['id_user'];
 
             return true;
-        }
-        else {
+        } else {
+
             return false;
         }
     }
 
-    
+    public static function userHasRole(string $role): bool {
+        $userId = $_SESSION['auth']['id_user'] ?? null;
+
+        if (!$userId) {
+            return false;
+        }
+
+        $roles = User::getUserRolesById($userId);
+
+        return in_array($role, $roles);
+    }
 }
